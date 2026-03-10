@@ -1,16 +1,37 @@
-# Nerfies
+## Academic Project Page Template
 
-This is the repository that contains source code for the [Nerfies website](https://nerfies.github.io).
+This repository is an academic paper project page template.
 
-If you find Nerfies useful for your work please cite:
-```
-@article{park2021nerfies
-  author    = {Park, Keunhong and Sinha, Utkarsh and Barron, Jonathan T. and Bouaziz, Sofien and Goldman, Dan B and Seitz, Steven M. and Martin-Brualla, Ricardo},
-  title     = {Nerfies: Deformable Neural Radiance Fields},
-  journal   = {ICCV},
-  year      = {2021},
-}
-```
+### Start using the template
 
-# Website License
+- Edit content in [index.html](index.html).
+- Use the provided HTML blocks and remove/comment out what you do not need.
+- Replace the favicon in `static/images/` with your own.
+
+### Components
+
+- Teaser video
+- Image carousel
+- YouTube embedding
+- Video carousel
+- PDF poster
+- BibTeX citation
+
+### Tips
+
+- Follow the comments inside [index.html](index.html).
+- Keep metadata tags updated for search and sharing previews.
+- For most media, 1920–2048 resolution is enough.
+- Compress images and videos for faster loading.
+- Use TinyPNG for images.
+- Prefer YouTube hosting for large videos (>10MB).
+- Works well with GitHub Pages.
+- You can add a tracker (e.g., Statcounter) for traffic analytics.
+
+
+### Acknowledgments
+
+Parts of this project page were adopted from the Nerfies page.
+
+### Website License
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
