@@ -1,4 +1,4 @@
-# Hammer Throw Distance Estimation
+## Hammer Throw Distance Estimation
 
 Official implementation for the paper:
 
