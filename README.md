@@ -1,4 +1,4 @@
-## Academic Project Page Template
+# Academic Project Page Template
 
 This repository is an academic paper project page template.
 
@@ -8,14 +8,6 @@ This repository is an academic paper project page template.
 - Use the provided HTML blocks and remove/comment out what you do not need.
 - Replace the favicon in `static/images/` with your own.
 
-### Components
-
-- Teaser video
-- Image carousel
-- YouTube embedding
-- Video carousel
-- PDF poster
-- BibTeX citation
 
 ### Tips
 
