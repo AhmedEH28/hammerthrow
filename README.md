@@ -9,6 +9,3 @@ Official implementation for the paper:
 ## Project Page
 https://ahmedeh28.github.io/hammerthrow/
 
-## Branches
-- `main` → research code (coming later)
-- `web` → project webpage
