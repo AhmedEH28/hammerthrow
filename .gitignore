@@ -1,2 +1,5 @@
+.DS_Store
 .DS_store
 .idea
+*.log
+Thumbs.db
