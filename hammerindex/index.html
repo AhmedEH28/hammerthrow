@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hammer Throw Analysis System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #f7fafd; }
+        .step-section { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #e0e0e0; padding: 2.5rem; margin-bottom: 2.5rem; position: relative; }
+        .results-section { background: #f0f8ff; border-radius: 12px; padding: 2rem; margin-top: 2rem; }
+        .step-indicator { font-size: 1.2rem; font-weight: 600; color: #1976d2; margin-bottom: 1.5rem; }
+        .card-header { background: #1976d2; color: #fff; font-weight: 600; font-size: 1.1rem; }
+        .icon-circle { background: #1976d2; color: #fff; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-right: 0.5rem; }
+        .form-text { color: #6c757d; font-size: 0.95rem; margin-top: 0.25rem; }
+        .progress-indicator { margin-top: 1rem; }
+        #dltResults .list-group-item {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            border-bottom: none !important;
+        }
+        #reconstructResults .list-group-item {
+            border-bottom: none !important;
+        }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+    <h2 class="text-center mb-4" style="color:#1976d2;">
+        <i class="bi bi-diagram-3"></i> Hammer Throw Analysis System
+    </h2>
+    <hr>
+    <!-- Step 1: 2D Detection -->
+    <div class="step-section" id="step1">
+        <div class="step-indicator"><span class="icon-circle"><i class="bi bi-1-circle"></i></span> Step 1: 2D Detection</div>
+        <form id="detectForm" enctype="multipart/form-data">
+            <div class="row g-4 mb-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-camera-video"></i> Side Camera Video/Frames</div>
+                        <div class="card-body">
+                            <label class="form-label">Data Type</label>
+                            <select class="form-select mb-2" name="side_type" id="side_type">
+                                <option value="video" selected>Video</option>
+                                <option value="frames">Frames</option>
+                            </select>
+                            <input type="file" class="form-control" name="side_data" id="side_data" required accept="video/*">
+                            <div class="form-text" id="side_file_help">Upload the side view video (mp4, avi, mov, mkv).</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-camera-video"></i> Back Camera Video/Frames</div>
+                        <div class="card-body">
+                            <label class="form-label">Data Type</label>
+                            <select class="form-select mb-2" name="back_type" id="back_type">
+                                <option value="video" selected>Video</option>
+                                <option value="frames">Frames</option>
+                            </select>
+                            <input type="file" class="form-control" name="back_data" id="back_data" required accept="video/*">
+                            <div class="form-text" id="back_file_help">Upload the back view video (mp4, avi, mov, mkv).</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-cpu"></i> Detection Model</div>
+                        <div class="card-body">
+                            <select class="form-select" name="model" required>
+                                <!-- Show only models that exist in the models/ folder -->
+                                <option value="Hyolov8s">Hyolov8s</option>
+                                <option value="Hyolov8n">Hyolov8n</option>
+                                <option value="Hyolov11n">Hyolov11n</option>
+                                <option value="Hyolov11s">Hyolov11s</option>
+                            </select>
+                            <div class="form-text">Choose the detection model.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 btn-lg mt-3"><i class="bi bi-play-circle"></i> Run 2D Detection</button>
+        </form>
+        <div id="detectStatus" class="mt-3"></div>
+    </div>
+
+    <!-- Step 2: DLT Parameter Calculation -->
+    <div class="step-section" id="step2">
+        <div class="step-indicator"><span class="icon-circle"><i class="bi bi-2-circle"></i></span> Step 2: DLT Parameter Calculation</div>
+        <form id="dltForm" enctype="multipart/form-data">
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="card h-100">
+                        <div class="card-header"><i class="bi bi-rulers"></i> Camera Calibration Data</div>
+                        <div class="card-body">
+                            <input type="file" class="form-control" name="calibration_data" required accept=".csv,.txt" id="calibrationFileInput">
+                            <div class="form-text">Upload a CSV file with 13 3D calibration points and their corresponding 2D coordinates in both camera views. Format: X,Y,Z,x1,y1,x2,y2</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Collapsible section for raw calibration data -->
+            <button class="btn btn-secondary btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#rawCalibrationDataCollapse" aria-expanded="false" aria-controls="rawCalibrationDataCollapse">
+                Show/Hide Loaded Calibration Data
+            </button>
+            <div class="collapse mt-2" id="rawCalibrationDataCollapse">
+                <div class="card card-body" id="rawCalibrationDataContent"><pre>Select a calibration file to view data.</pre></div>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 btn-lg mt-3"><i class="bi bi-gear"></i> Calculate DLT Parameters</button>
+        </form>
+        <div id="dltStatus" class="mt-3"></div>
+        <div id="dltResults" class="mt-3"></div>
+    </div>
+
+    <!-- Step 3: 3D Point Reconstruction -->
+    <div class="step-section" id="step3">
+        <div class="step-indicator"><span class="icon-circle"><i class="bi bi-3-circle"></i></span> Step 3: 3D Point Reconstruction</div>
+
+        <div class="mb-3">
+            <label class="form-label">Select Input Method:</label>
+            <div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="reconstructionInputMethod" id="autoInput" value="auto" checked>
+                    <label class="form-check-label" for="autoInput">Load from Previous Steps</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="reconstructionInputMethod" id="manualInput" value="manual">
+                    <label class="form-check-label" for="manualInput">Enter Manually</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="autoInputArea">
+            <h5>Data from Previous Steps</h5>
+            <!-- Frame Range Inputs -->
+            <div class="row mb-3" id="frameRangeInputs">
+                <div class="col-md-6">
+                    <label class="form-label">Start Frame (inclusive)</label>
+                    <input type="number" class="form-control" id="startFrame" value="1">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">End Frame (inclusive)</label>
+                    <input type="number" class="form-control" id="endFrame" value="-1"> <!-- Use -1 to indicate last frame -->
+                </div>
+            </div>
+
+            <!-- Frame Rate Input -->
+            <div class="mb-3">
+                <label class="form-label">Frame Rate (Frames per Second)</label>
+                <input type="number" class="form-control" id="frameRateAuto" value="240" step="any">
+                <div class="form-text">Enter the frame rate of your videos/frames.</div>
+            </div>
+
+            <!-- Collapsible section for loaded 2D points -->
+            <button class="btn btn-secondary btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#loaded2dPointsCollapse" aria-expanded="false" aria-controls="loaded2dPointsCollapse">
+                Show/Hide Loaded 2D Points
+            </button>
+            <div class="collapse mt-2" id="loaded2dPointsCollapse">
+                <div class="card card-body" id="loaded2dPointsContent"><pre>Loading 2D points...</pre></div>
+            </div>
+
+            <!-- Collapsible section for loaded DLT parameters -->
+            <button class="btn btn-secondary btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#loadedDltParamsCollapse" aria-expanded="false" aria-controls="loadedDltParamsCollapse">
+                Show/Hide Loaded DLT Parameters
+            </button>
+            <div class="collapse mt-2" id="loadedDltParamsCollapse">
+                <div class="card card-body" id="loadedDltParamsContent"><pre>Loading DLT parameters...</pre></div>
+            </div>
+
+            <!-- Area for displaying Reconstructed 3D Points -->
+            <div class="card card-body mt-3" id="reconstructed3dPointsContent" style="display: none;"><pre>Reconstructed 3D points will appear here after reconstruction.</pre></div>
+
+        </div>
+
+        <div id="manualInputArea" style="display: none;">
+            <h5>Manual Input Data</h5>
+            
+            <!-- Manual Frame Rate Input -->
+            <div class="mb-3">
+                <label class="form-label">Frame Rate (Frames per Second)</label>
+                <input type="number" class="form-control" id="frameRateManual" value="240" step="any">
+                <div class="form-text">Enter the frame rate of your videos/frames if entering data manually.</div>
+            </div>
+
+            <!-- Collapsible section for manual 2D points input -->
+            <button class="btn btn-secondary btn-sm mt-2" type="button">
+                 Show/Hide Manual 2D Points Input
+             </button>
+             <div class="mt-2" id="manual2dPointsCollapse">
+                <div class="card card-body">
+                    <label class="form-label">Side Camera 2D Points (JSON format: [[x1, y1], [x2, y2], ...])</label>
+                    <textarea class="form-control mb-2" id="manualSide2dPoints" rows="5"></textarea>
+                     <label class="form-label">Back Camera 2D Points (JSON format: [[x1, y1], [x2, y2], ...])</label>
+                    <textarea class="form-control" id="manualBack2dPoints" rows="5"></textarea>
+                </div>
+            </div>
+            
+             <!-- Collapsible section for manual DLT parameters input -->
+            <button class="btn btn-secondary btn-sm mt-2" type="button">
+                Show/Hide Manual DLT Parameters Input
+            </button>
+            <div class="mt-2" id="manualDltParamsContentArea">
+                <div class="card card-body">
+                    <label class="form-label">Side Camera DLT Parameters (JSON format: [L1, L2, ... L11])</label>
+                    <textarea class="form-control mb-2" id="manualSideDltParams" rows="3"></textarea>
+                     <label class="form-label">Back Camera DLT Parameters (JSON format: [L1, L2, ... L11])</label>
+                    <textarea class="form-control" id="manualBackDltParams" rows="3"></textarea>
+                </div>
+            </div>
+
+        </div>
+
+        <button class="btn btn-info w-100 btn-lg mb-3 mt-3" id="reconstructBtn"><i class="bi bi-cube"></i> Reconstruct 3D Points</button>
+        <div id="reconstructionLoading" class="text-center" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Reconstructing 3D points, please wait...</p>
+        </div>
+        <div id="reconstructStatus" class="mt-3"></div>
+        <div id="reconstructResults" class="mt-3"></div>
+    </div>
+
+    <!-- Data Format Converter Section -->
+    <div class="step-section" id="dataConverterSection">
+        <div class="step-indicator">
+            <span class="icon-circle"><i class="bi bi-arrow-repeat"></i></span> Data Format Converter
+            <button class="btn btn-sm btn-outline-primary float-end" id="toggleConverter">
+                <i class="bi bi-chevron-down"></i> Toggle Converter
+            </button>
+        </div>
+        <div id="converterContent" style="display: none;">
+            <div class="format-selector mb-3">
+                <label>Conversion Type:</label>
+                <select id="conversionType" class="form-select">
+                    <option value="csv_to_array">CSV to Array Format</option>
+                    <option value="labeled_to_array">Labeled Values to Array</option>
+                    <option value="table_to_columns">Table to Column Format</option>
+                </select>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Input Data</div>
+                        <div class="card-body">
+                            <textarea id="input" class="form-control" rows="10" placeholder="Paste your data here..."></textarea>
+                            <button class="btn btn-primary mt-2" onclick="convert()">Convert</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Output</div>
+                        <div class="card-body">
+                            <textarea id="output" class="form-control" rows="10" readonly></textarea>
+                            <button class="btn btn-success mt-2" onclick="copyOutput()">Copy Output</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Distance Estimation -->
+    <div class="step-section" id="step4">
+        <div class="step-indicator"><span class="icon-circle"><i class="bi bi-4-circle"></i></span> Step 4: Distance Estimation</div>
+
+        <!-- Step 4: Input Method Toggle and Manual Input -->
+        <div class="mb-3">
+            <label class="form-label">Select Input Method for Analysis:</label>
+            <div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="analysisInputMethod" id="analysisAutoInput" value="auto" checked>
+                    <label class="form-check-label" for="analysisAutoInput">Load from Step 3 (Reconstructed 3D Points)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="analysisInputMethod" id="analysisManualInput" value="manual">
+                    <label class="form-check-label" for="analysisManualInput">Enter Manually</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="analysisAutoInputArea">
+            <h5>Using 3D Points from Step 3</h5>
+             <!-- Content will be populated by JS -->
+             <div class="card card-body mt-2" id="loaded3dPointsContent"><pre>Reconstruct 3D points in Step 3 first.</pre></div>
+             <div class="card card-body mt-2" id="loadedFrameRateContent"><pre>Frame Rate: N/A</pre></div>
+        </div>
+
+        <div id="analysisManualInputArea" style="display: none;">
+            <h5>Manual 3D Points Input</h5>
+             <!-- Manual Frame Rate Input for Analysis -->
+             <div class="mb-3">
+                 <label class="form-label">Frame Rate (Frames per Second)</label>
+                 <input type="number" class="form-control" id="frameRateAnalysisManual" value="240" step="any">
+                 <div class="form-text">Enter the frame rate if entering 3D points manually.</div>
+             </div>
+             <div class="mb-3">
+                <label class="form-label">3D Points (JSON format: [[X1, Y1, Z1], [X2, Y2, Z2], ...])</label>
+                <textarea class="form-control" id="manual3dPoints" rows="10"></textarea>
+                <div class="form-text">Enter 3D points as a JSON array of [X, Y, Z] arrays, or as space/tab-separated X Y Z values, one point per line.</div>
+             </div>
+        </div>
+
+        <button class="btn btn-warning w-100 btn-lg mb-3" id="analyzeBtn"><i class="bi bi-bar-chart"></i> Calculate Velocity, Height, Angle, Distance</button>
+        <div id="analyzeStatus" class="mt-3"></div>
+        <div id="analyzeResults" class="mt-3"></div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section" id="resultsSection" style="display:none;">
+        <h5><i class="bi bi-bar-chart"></i> Analysis Results (5 Steps)</h5>
+        <div id="analysisResultsContent">
+            <!-- Results for each step will be displayed here -->
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Add converter functions in global scope -->
+<script>
+// Data converter functions
+function convert() {
+    const input = document.getElementById('input').value.trim();
+    const type = document.getElementById('conversionType').value;
+    let output = '';
+    
+    try {
+        switch(type) {
+            case 'csv_to_array':
+                output = convertCSVToArray(input);
+                break;
+            case 'labeled_to_array':
+                output = convertLabeledToArray(input);
+                break;
+            case 'table_to_columns':
+                output = convertTableToColumns(input);
+                break;
+        }
+        
+        document.getElementById('output').value = output;
+        
+        if (output) {
+            document.getElementById('output').style.display = 'block';
+            console.log('Conversion successful');
+        }
+    } catch(error) {
+        document.getElementById('output').value = 'Error: ' + error.message;
+    }
+}
+
+function convertCSVToArray(input) {
+    const lines = input.split('\n').filter(line => line.trim());
+    const result = lines.map(line => {
+        const parts = line.split(',').map(p => p.trim());
+        const values = parts.filter(p => !isNaN(parseFloat(p))).map(val => parseFloat(val));
+        const finalValues = values.length > 2 ? values.slice(1) : values;
+        return '    [' + finalValues.join(', ') + ']';
+    });
+    
+    return '[\n' + result.join(',\n') + '\n]';
+}
+
+function convertLabeledToArray(input) {
+    const lines = input.split('\n').filter(line => line.trim());
+    const values = [];
+    
+    lines.forEach(line => {
+        if (line.includes(':')) {
+            const value = line.split(':')[1].trim();
+            values.push(parseFloat(value));
+        } else {
+            const num = parseFloat(line.trim());
+            if (!isNaN(num)) values.push(num);
+        }
+    });
+    
+    return '[\n    ' + values.join(', ') + '\n]';
+}
+
+function convertTableToColumns(input) {
+    const lines = input.split('\n').filter(line => line.trim() && !line.includes('---'));
+    
+    // First pass: find the maximum width for each column
+    const columnWidths = [0, 0, 0, 0]; // Frame, X, Y, Z
+    lines.forEach(line => {
+        const parts = line.trim().split(/\s+/);
+        parts.forEach((part, index) => {
+            if (index < columnWidths.length) {
+                columnWidths[index] = Math.max(columnWidths[index], part.length);
+            }
+        });
+    });
+    
+    // Second pass: format each line with proper spacing
+    const result = lines.map(line => {
+        const parts = line.trim().split(/\s+/);
+        
+        const values = parts.length > 3 ? parts.slice(1) : parts;
+        
+        // Format each number with proper decimal places and handle negative signs
+        return values.map((val, index) => {
+            const num = parseFloat(val);
+            if (!isNaN(num)) {
+                
+                const formatted = num.toFixed(10);
+                
+                return formatted.padStart(columnWidths[index + 1] + 1);
+            }
+            return val.padStart(columnWidths[index + 1] + 1);
+        }).join('     '); // Use 5 spaces between columns
+    }).filter(line => line);
+    
+    return result.join('\n');
+}
+
+function copyOutput() {
+    const output = document.getElementById('output');
+    output.select();
+    document.execCommand('copy');
+    alert('Output copied to clipboard!');
+}
+
+// Sample data for testing
+const samples = {
+    csv_to_array: `605,0.3164427439371745,0.7001073201497395
+606,0.3108209609985352,0.688004387749566
+607,0.3044027328491211,0.6756428471317998`,
+    
+    labeled_to_array: `L1: 0.122685208
+L2: 0.004410698
+L3: -0.049834586
+L4: 0.467277850`,
+    
+    table_to_columns: `Frame                         X                             Y                             Z
+-------------------------------------------------------------------------------------------
+2                             2.3838122698                  2.4947839693                  1.5619817085
+3                             2.4675187968                  2.5703338776                  1.5437937369`
+};
+
+// Function to display the 5-step analysis results in tables
+function displayAnalysisResults(results) {
+    console.log("DEBUG: displayAnalysisResults function called with results:", results);
+    console.log("-------------------------------------------------------");
+    let resultsHtml = '';
+    const stepTitles = {
+        'step1_no_filter': 'Step 1: No Filtering',
+        'step2_height_175_235': 'Step 2: Height Range (1.15m to 3.00m)',
+        'step3_height_17_25': 'Step 3: Velocity Range (18m/s to 32m/s)',
+        'step4_velocity_outliers': 'Results After Outlier Removal',
+        'step5_recalculated_avg_vel': 'Average Results'
+    };
+
+    for (const stepKey in stepTitles) {
+        if (results.hasOwnProperty(stepKey)) {
+            const stepResults = results[stepKey];
+            resultsHtml += `<div class="card mt-4"><div class="card-header">${stepTitles[stepKey]}</div><div class="card-body">`;
+            
+            if (stepResults && stepResults.length > 0) {
+                resultsHtml += '<pre>';
+                // Add table header with Frame column
+                resultsHtml += `Frame         X                             Y                             Z                             Velocity (m/s)                Height (m)                    Angle (degrees)               Distance (m)\n`;
+                resultsHtml += `---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n`;
+                
+                for (const pointResult of stepResults) {
+                    // Check if this is the average row
+                    const isAverage = pointResult.frame === "Average";
+                    const frameStr = (typeof pointResult.frame === 'string' ? pointResult.frame : pointResult.frame.toString()).padEnd(14);
+                    
+                    // Format the row
+                    let row = `${frameStr}${pointResult.x.toFixed(10).padEnd(30)}${pointResult.y.toFixed(10).padEnd(30)}${pointResult.z.toFixed(10).padEnd(30)}${pointResult.velocity !== null ? pointResult.velocity.toFixed(8).padEnd(30) : 'NaN '.padEnd(30)}${pointResult.height !== null ? pointResult.height.toFixed(8).padEnd(30) : 'NaN '.padEnd(30)}${pointResult.angle !== null ? pointResult.angle.toFixed(8).padEnd(30) : 'NaN '.padEnd(30)}${pointResult.distance !== null ? pointResult.distance.toFixed(8) : 'NaN '}`;
+                    
+                    // Add separator line before average row
+                    if (isAverage) {
+                        resultsHtml += `---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n`;
+                        resultsHtml += `<strong style="color: #28a745;">${row}</strong>\n`;
+                    } else {
+                        resultsHtml += `${row}\n`;
+                    }
+                }
+                resultsHtml += '</pre>';
+            } else {
+                resultsHtml += '<p>No data points matched the criteria for this step.</p>';
+            }
+
+            resultsHtml += '</div></div>'; 
+        }
+    }
+    $('#analysisResultsContent').html(resultsHtml);
+}
+</script>
+
+<script>
+$(function() {
+    // Debugging: Check if the calibration file input element is found
+    if ($('#calibrationFileInput').length === 0) {
+        console.error("Error: Calibration file input element #calibrationFileInput not found!");
+    } else {
+        console.log("Calibration file input element #calibrationFileInput found.");
+    }
+
+    // File input for side camera
+    $('#side_type').on('change', function() {
+        if ($(this).val() === 'frames') {
+            $('#side_data').attr('accept', 'image/*').attr('multiple', true);
+            $('#side_file_help').text('Upload one or more image frames for the side view (jpg, png, jpeg, bmp).');
+        } else {
+            $('#side_data').attr('accept', 'video/*').removeAttr('multiple');
+            $('#side_file_help').text('Upload the side view video (mp4, avi, mov, mkv).');
+        }
+    });
+    // File input for back camera
+    $('#back_type').on('change', function() {
+        if ($(this).val() === 'frames') {
+            $('#back_data').attr('accept', 'image/*').attr('multiple', true);
+            $('#back_file_help').text('Upload one or more image frames for the back view (jpg, png, jpeg, bmp).');
+        } else {
+            $('#back_data').attr('accept', 'video/*').removeAttr('multiple');
+            $('#back_file_help').text('Upload the back view video (mp4, avi, mov, mkv).');
+        }
+    });
+
+    // Variable to store the detection ID from Step 1
+    let currentDetectId = null;
+    // Variable to store the DLT parameters from Step 2
+    let currentDltParams = null;
+    // Variable to store the full parsed calibration data from Step 2
+    let currentCalibrationData = null;
+    // Variable to store the full 2D detection results from Step 1
+    let currentDetectionResults = null;
+    // Variable to store the frame rate from Step 1
+    let currentFrameRate = null;
+
+    // Variable to store reconstructed 3D points from Step 3
+    let currentReconstructed3dPoints = null;
+
+    // Step 1: 2D Detection
+    $('#detectForm').on('submit', function(e) {
+        e.preventDefault();
+        $('#detectStatus').html('<div class="text-info"><i class="bi bi-hourglass-split"></i> Running detection, please wait...</div>');
+         // Disable Step 1 elements while processing
+        $('#detectForm input, #detectForm select, #detectForm button').prop('disabled', true);
+        var formData = new FormData(); 
+
+        // Explicitly append files and other form data
+        formData.append('side_data', $('#side_data')[0].files[0]);
+        formData.append('back_data', $('#back_data')[0].files[0]);
+        formData.append('side_type', $('#side_type').val());
+        formData.append('back_type', $('#back_type').val());
+        formData.append('model', $('#detectForm select[name="model"]').val());
+
+        // --- Debugging: Log FormData contents ---
+        console.log("FormData contents for detection:");
+        for (let pair of formData.entries()) {
+            console.log(pair[0]+ ', ' + pair[1]); 
+        }
+        console.log("-------------------------");
+        // ---------------------------------------
+        
+        $.ajax({
+            url: '/detect',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(data) {
+                $('#detectStatus').html('<div class="text-success"><i class="bi bi-check-circle"></i> 2D Detection complete!</div>');
+                
+                // Store the full detection results in window.detectionResults for Step 3 and 4
+                window.detectionResults = data; 
+
+                // Also populate currentDetectionResults for displaying in the collapsible section
+                currentDetectionResults = { side: data.side_results.coordinates, back: data.back_results.coordinates };
+                currentFrameRate = data.frame_rate; // Ensure frame rate is also stored for display
+
+                // Populate the auto input area with loaded data after successful detection
+                populateAutoInputArea();
+
+                let html = '<b>2D Detection Results (Side View):</b><br>';
+                html += '<pre>' + JSON.stringify(data.side_results.coordinates, null, 2) + '</pre>';
+                html += '<b>2D Detection Results (Back View):</b><br>';
+                html += '<pre>' + JSON.stringify(data.back_results.coordinates, null, 2) + '</pre>';
+                // Show detected videos side by side
+                let videoHtml = `<div class="row mt-4"><div class="col-md-6 text-center"><label class="fw-bold">Side View Detection Video</label><br><video width="100%" height="auto" controls><source src="${data.side_detected_video.replace('results/', '/static/detections/')}" type="video/mp4">Your browser does not support the video tag.</video></div><div class="col-md-6 text-center"><label class="fw-bold">Back View Detection Video</label><br><video width="100%" height="auto" controls><source src="${data.back_detected_video.replace('results/', '/static/detections/')}" type="video/mp4">Your browser does not support the video tag.</video></div></div>`;
+                $('#detectStatus').append(videoHtml);
+                // Keep Step 1 elements disabled after success to prevent re-running with same files immediately
+                // $('#detectForm input, #detectForm select, #detectForm button').prop('disabled', true);
+                $('html, body').animate({ scrollTop: $('#step2').offset().top }, 500);
+            },
+            error: function(xhr) {
+                let msg = 'Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : xhr.statusText);
+                $('#detectStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> ' + msg + '</div>');
+                // Re-enable Step 1 elements if there's an error
+                $('#detectForm input, #detectForm select, #detectForm button').prop('disabled', false);
+            }
+        });
+    });
+
+    // Step 2: DLT Parameter Calculation - File Input Change
+    $('#calibrationFileInput').on('change', function() {
+        console.log("Calibration file input changed.");
+        const file = this.files[0];
+        if (file) {
+            console.log("File selected:", file.name);
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const fileContent = e.target.result;
+                console.log("File read successfully. Content length:", fileContent.length);
+                console.log("First 100 characters of content:", fileContent.substring(0, 100));
+                // Display the file content in the collapsible section
+                $('#rawCalibrationDataContent').html('<pre>' + escapeHTML(fileContent) + '</pre>');
+            };
+
+            reader.onerror = function(e) {
+                console.error("Error reading file:", e.target.error);
+                $('#rawCalibrationDataContent').html('<div class="text-danger">Error reading file: ' + e.target.error + '</div>');
+            };
+
+            reader.readAsText(file); // Read the file as text
+        } else {
+            console.log("No file selected.");
+            $('#rawCalibrationDataContent').html('<pre>Select a calibration file to view data.</pre>');
+        }
+    });
+
+    // Helper function to escape HTML characters for displaying file content
+    function escapeHTML(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // Step 2: DLT Parameter Calculation Form Submission
+    $('#dltForm').on('submit', function(e) {
+        e.preventDefault();
+        $('#dltStatus').html('<div class="text-info"><i class="bi bi-hourglass-split"></i> Calculating DLT parameters, please wait...</div>');
+         // Disable Step 2 elements while processing
+        $('#dltForm input, #dltForm button').prop('disabled', true);
+        var formData = new FormData(); // Create empty FormData object
+
+        // Explicitly append the calibration file
+        formData.append('calibration_data', $('input[name="calibration_data"]')[0].files[0]);
+        
+        // --- Debugging: Log FormData contents ---
+        console.log("FormData contents:");
+        for (let pair of formData.entries()) {
+            console.log(pair[0]+ ', ' + pair[1]); 
+        }
+        console.log("-------------------------");
+        // ---------------------------------------
+        
+        // AJAX call to the new /calculate_dlt endpoint
+        $.ajax({
+            url: '/calculate_dlt',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(data) {
+                $('#dltStatus').html('<div class="text-success"><i class="bi bi-check-circle"></i> DLT Parameters calculated!</div>');
+                
+                // Store DLT parameters and full calibration data
+                currentDltParams = data.dlt_params;
+                currentCalibrationData = data.calibration_data; // Store full calibration data
+
+                // Display the calculated DLT parameters in a beautiful, bordered container side-by-side
+                let dltHtml = '';
+                
+                dltHtml += '<div class="card mt-3">'; // Start Bootstrap Card container (outer border)
+                dltHtml += '<div class="card-header">Calculated DLT Parameters</div>'; // Card header
+                dltHtml += '<div class="card-body">'; // Card body for padding
+
+                dltHtml += '<div class="row">'; // Start a Bootstrap row for columns
+
+                // Side Camera DLT Parameters Column
+                dltHtml += '<div class="col-md-6">';
+                dltHtml += '<div class="border p-3 h-100"><h5>Side DLT</h5><ul class="list-group list-group-flush">'; // Inner border, padding, and updated heading
+                for (let i = 0; i < data.dlt_params.side.length; i++) {
+                    dltHtml += `<li class="list-group-item"><b>L${i + 1}:</b> ${data.dlt_params.side[i].toFixed(9)}</li>`; // Display with 9 decimal places
+                }
+                dltHtml += '</ul></div>';
+                dltHtml += '</div>'; // End Side Camera Column
+
+                // Back Camera DLT Parameters Column
+                dltHtml += '<div class="col-md-6">';
+                dltHtml += '<div class="border p-3 h-100"><h5>Back DLT</h5><ul class="list-group list-group-flush">'; // Inner border, padding, and updated heading
+                for (let i = 0; i < data.dlt_params.back.length; i++) {
+                    dltHtml += `<li class="list-group-item"><b>L${i + 1}:</b> ${data.dlt_params.back[i].toFixed(9)}</li>`; // Display with 9 decimal places
+                }
+                dltHtml += '</ul></div>';
+                dltHtml += '</div>'; // End Back Camera Column
+
+                dltHtml += '</div>'; // End the Bootstrap row
+
+                dltHtml += '</div>'; // End Card body
+                dltHtml += '</div>'; // End Card container
+
+                $('#dltResults').html(dltHtml);
+
+                // Add collapsible section for raw calibration data
+                let rawCalibrationHtml = '';
+                rawCalibrationHtml += '<button class="btn btn-secondary btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#rawCalibrationDataCollapse" aria-expanded="false" aria-controls="rawCalibrationDataCollapse">';
+                rawCalibrationHtml += 'Show/Hide Raw Calibration Data';
+                rawCalibrationHtml += '</button>';
+                rawCalibrationHtml += '<div class="collapse mt-2" id="rawCalibrationDataCollapse">';
+                rawCalibrationHtml += '<div class="card card-body"><pre>' + JSON.stringify(data.calibration_data, null, 2) + '</pre></div>';
+                rawCalibrationHtml += '</div>';
+                $('#dltResults').append(rawCalibrationHtml);
+
+                 // Manually initialize Bootstrap Collapse for the new button
+                new bootstrap.Collapse(document.getElementById('rawCalibrationDataCollapse'), {toggle: false});
+
+                 // Keep Step 2 elements disabled after success to prevent re-running immediately
+                // $('#dltForm input, #dltForm button').prop('disabled', true);
+                $('html, body').animate({ scrollTop: $('#step3').offset().top }, 500);
+            },
+            error: function(xhr) {
+                let msg = 'Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : xhr.statusText);
+                $('#dltStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> ' + msg + '</div>');
+                // Re-enable Step 2 elements if there's an error
+                $('#dltForm input, #dltForm button').prop('disabled', false);
+            }
+        });
+    });
+
+    // Step 3: Input Method Toggle Handler
+    $('input[name="reconstructionInputMethod"]').on('change', function() {
+        if ($(this).val() === 'manual') {
+            $('#autoInputArea').hide();
+            $('#manualInputArea').show();
+        } else {
+            $('#manualInputArea').hide();
+            $('#autoInputArea').show();
+             // Populate auto input area with loaded data
+            populateAutoInputArea();
+        }
+    });
+
+    // Function to populate the auto input area with loaded data
+    function populateAutoInputArea() {
+        // Display loaded 2D points (full data)
+        if (currentDetectionResults) {
+            // Get frame range inputs
+            const startFrame = parseInt(document.getElementById('startFrame').value);
+            const endFrame = parseInt(document.getElementById('endFrame').value);
+
+            // Determine total frames. Assuming side and back have the same number of frames for video.
+            const totalFrames = currentDetectionResults.side ? currentDetectionResults.side.length : 0;
+
+            // Filter coordinates based on the selected frame range
+            const filteredSideCoords = filterCoordinatesByFrame(currentDetectionResults.side, startFrame, endFrame, totalFrames);
+            const filteredBackCoords = filterCoordinatesByFrame(currentDetectionResults.back, startFrame, endFrame, totalFrames);
+
+            let pointsHtml = '<b>Loaded 2D Points (within specified frame range):</b><br>';
+            pointsHtml += '<b>Side View:</b><br>';
+            pointsHtml += '<pre>' + JSON.stringify(filteredSideCoords, null, 2) + '</pre>';
+            pointsHtml += '<b>Back View:</b><br>';
+            pointsHtml += '<pre>' + JSON.stringify(filteredBackCoords, null, 2) + '</pre>';
+
+            $('#loaded2dPointsContent').html(pointsHtml);
+
+        } else {
+             $('#loaded2dPointsContent').html('<pre>2D Detection results not available. Please complete Step 1.</pre>');
+        }
+
+        // Display loaded DLT parameters
+        if (currentDltParams) {
+            $('#loadedDltParamsContent').html('<pre>' + JSON.stringify(currentDltParams, null, 2) + '</pre>');
+        } else {
+            $('#loadedDltParamsContent').html('<pre>DLT parameters not available. Please complete Step 2.</pre>');
+        }
+
+        // Display the frame rate entered in the Step 3 auto input field
+        let frameRateInStep3Auto = $('#frameRateAuto').val();
+        if (frameRateInStep3Auto) {
+             $('#loadedFrameRateContent').html('<pre>Frame Rate: ' + frameRateInStep3Auto + ' FPS (from Step 3 Input)</pre>');
+        } else {
+             $('#loadedFrameRateContent').html('<pre>Frame Rate: N/A. Complete Step 3 and ensure frame rate is entered.</pre>');
+        }
+    }
+
+    // Initial population of auto input area on page load
+    populateAutoInputArea();
+
+    // Add event listeners to update displayed 2D points when frame range changes
+    $('#startFrame, #endFrame').on('change', function() {
+        populateAutoInputArea();
+    });
+
+    // Add this function to handle image sequence detection
+    function handleImageSequenceDetection(sideResults, backResults) {
+        // Display detected videos
+        const sideVideo = document.getElementById('sideVideo');
+        const backVideo = document.getElementById('backVideo');
+        
+        sideVideo.src = sideResults.detected_video_path;
+        backVideo.src = backResults.detected_video_path;
+        
+        // Store the results for later use
+        window.detectionResults = {
+            side: sideResults,
+            back: backResults,
+            is_image_sequence: true
+        };
+         // Hide frame range inputs for image sequences
+        $('#frameRangeInputs').hide();
+         // Update the UI to show we're using all frames (Optional feedback)
+         $('#reconstructStatus').html('<div class="alert alert-info mt-2">Detected Image Sequence. Using all frames for 3D reconstruction.</div>');
+    }
+
+    // Function to align coordinates by frame number
+    function alignCoordinatesByFrame(sideCoords, backCoords) {
+        let alignedCoordinates = [];
+        const backFrames = new Set(backCoords.map(coord => coord.frame));
+
+        for (const sideCoord of sideCoords) {
+            if (backFrames.has(sideCoord.frame)) {
+                // Find the corresponding back coordinate for this frame
+                const backCoord = backCoords.find(coord => coord.frame === sideCoord.frame);
+                if (backCoord) {
+                    alignedCoordinates.push({
+                        frame: sideCoord.frame,
+                        side: { x: sideCoord.x, y: sideCoord.y },
+                        back: { x: backCoord.x, y: backCoord.y }
+                    });
+                } else {
+                     // This case should ideally not happen if backFrames has the frame
+                     console.warn(`Matching back frame not found for side frame ${sideCoord.frame}`);
+                }
+            } else {
+                 console.warn(`Side frame ${sideCoord.frame} has no matching back frame.`);
+            }
+        }
+
+        if (alignedCoordinates.length === 0) {
+            throw new Error('No matching 2D points found between side and back views within the selected frame range.');
+        }
+
+        return alignedCoordinates;
+    }
+
+    // Modify the loadFromPreviousSteps function
+    function loadFromPreviousSteps() {
+        console.log("DEBUG: loadFromPreviousSteps called");
+
+        if (!window.detectionResults || !window.detectionResults.side_results || !window.detectionResults.back_results) {
+            alert('Please run 2D detection first (Step 1)');
+            console.error("Error: window.detectionResults is missing or incomplete.", window.detectionResults);
+            return;
+        }
+
+        // Access the detection results using the correct keys from the stored data
+        const sideResults = window.detectionResults.side_results;
+        const backResults = window.detectionResults.back_results;
+        const is_image_sequence = window.detectionResults.is_image_sequence; // Check if it's an image sequence
+
+        // Get DLT parameters from the stored variable (from Step 2)
+        const sideDLTParams = currentDltParams ? currentDltParams.side : null;
+        const backDLTParams = currentDltParams ? currentDltParams.back : null;
+
+        if (!sideDLTParams || !backDLTParams) {
+            alert('Please complete Step 2 (DLT Parameter Calculation) first.');
+            console.error("Error: DLT parameters are missing.", currentDltParams);
+            return;
+        }
+
+        // Get frame rate from the auto input field
+        const frameRate = parseFloat($('#frameRateAuto').val());
+        if (isNaN(frameRate) || frameRate <= 0) {
+             alert('Please enter a valid frame rate in Step 3');
+             console.error("Error: Invalid frame rate.", frameRate);
+             return;
+         }
+
+        let sideCoordinatesToUse;
+        let backCoordinatesToUse;
+
+        // If it's an image sequence, automatically use all frames
+        if (is_image_sequence) {
+            console.log("DEBUG: Handling image sequence - using all frames.");
+            sideCoordinatesToUse = sideResults.coordinates;
+            backCoordinatesToUse = backResults.coordinates;
+
+        } else {
+            // Original video handling code: use frame range
+            console.log("DEBUG: Handling video - using frame range.");
+            const startFrame = parseInt(document.getElementById('startFrame').value);
+            const endFrame = parseInt(document.getElementById('endFrame').value);
+
+            if (isNaN(startFrame) || isNaN(endFrame)) {
+                alert('Please enter valid start and end frames');
+                console.error("Error: Invalid start or end frame.", {startFrame, endFrame});
+                return;
+            }
+
+            // Determine total frames. Assuming side and back have the same number of frames for video.
+            const totalFrames = sideResults.coordinates ? sideResults.coordinates.length : 0;
+
+            // Filter coordinates for the selected frame range
+            sideCoordinatesToUse = filterCoordinatesByFrame(sideResults.coordinates, startFrame, endFrame, totalFrames);
+            backCoordinatesToUse = filterCoordinatesByFrame(backResults.coordinates, startFrame, endFrame, totalFrames);
+
+            if (sideCoordinatesToUse.length === 0 || backCoordinatesToUse.length === 0) {
+                 alert('No 2D points found within the specified frame range. Please check your detection results and frame range.');
+                 console.warn("Warning: No coordinates found in frame range.", {startFrame, endFrame, sideCoordinatesToUse, backCoordinatesToUse});
+                 return;
+             }
+             console.log("DEBUG: Filtered coordinates for range", {startFrame, endFrame, sideCoordinatesToUse: sideCoordinatesToUse.length, backCoordinatesToUse: backCoordinatesToUse.length});
+        }
+
+        // Align coordinates by frame number before sending to backend
+        let alignedCoordinates;
+        try {
+             console.log("DEBUG: Aligning coordinates by frame.");
+             alignedCoordinates = alignCoordinatesByFrame(sideCoordinatesToUse, backCoordinatesToUse);
+             console.log("DEBUG: Alignment complete. Aligned count:", alignedCoordinates.length);
+
+             // Check if aligned coordinates were found. If not, display error and return.
+             if (!alignedCoordinates || alignedCoordinates.length === 0) {
+                  alert('No matching 2D points found between side and back views within the selected frame range after alignment. Ensure frames with detections exist in both views within the range.');
+                  console.error("Error: No aligned coordinates found.", {sideCoordinatesToUse, backCoordinatesToUse});
+                  return;
+              }
+
+        } catch (e) {
+             alert('Error aligning coordinates: ' + e.message);
+             console.error("Error during coordinate alignment:", e);
+             return;
+        }
+
+        // Extract side and back coordinates from the aligned list for sending to backend
+        // The backend expects a list of objects with 'frame', 'x', 'y'
+        console.log("DEBUG: alignedCoordinates before mapping:", alignedCoordinates);
+        const finalSideCoordinates = alignedCoordinates.map(item => ({ frame: item.frame, x: item.side.x, y: item.side.y }));
+        console.log("DEBUG: finalSideCoordinates after mapping:", finalSideCoordinates);
+        const finalBackCoordinates = alignedCoordinates.map(item => ({ frame: item.frame, x: item.back.x, y: item.back.y }));
+        console.log("DEBUG: finalBackCoordinates after mapping:", finalBackCoordinates);
+
+        // --- Add logging here ---
+        console.log("Prepared data for 3D reconstruction:");
+        console.log("Side Coordinates:", finalSideCoordinates);
+        console.log("Back Coordinates:", finalBackCoordinates);
+        console.log("Side DLT Params:", sideDLTParams);
+        console.log("Back DLT Params:", backDLTParams);
+        console.log("Frame Rate:", frameRate);
+        console.log("Is Image Sequence:", is_image_sequence);
+        // --------------------------
+
+        // Perform 3D reconstruction
+        perform3DReconstruction(
+            finalSideCoordinates,
+            finalBackCoordinates,
+            sideDLTParams,
+            backDLTParams,
+            frameRate
+        );
+    }
+
+    // Modify the perform3DReconstruction function
+    function perform3DReconstruction(sideCoordinates, backCoordinates, sideDLTParams, backDLTParams, frameRate) {
+        console.log("DEBUG: perform3DReconstruction called");
+        const data = {
+            action: 'reconstruct',
+            side_coordinates: sideCoordinates,
+            back_coordinates: backCoordinates,
+            side_dlt_params: sideDLTParams,
+            back_dlt_params: backDLTParams,
+            frame_rate: frameRate,
+        };
+
+        // Show loading indicator
+        document.getElementById('reconstructionLoading').style.display = 'block';
+        $('#reconstructStatus').html(''); // Clear previous status
+        // Hide and clear previous 3D points display
+        $('#reconstructed3dPointsContent').css('display', 'none').html('<pre>Reconstructing 3D points...</pre>');
+         $('#analysisResultsContent').html(''); // Clear previous analysis results
+
+        fetch('/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            console.log("DEBUG: Received response from /analyze (reconstruct)");
+            if (!response.ok) {
+                // Attempt to parse error message from backend
+                return response.json().then(errorData => {
+                    console.error("DEBUG: Backend error response:", errorData);
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    // If JSON parsing fails, throw a generic error with status
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(results => {
+            console.log("DEBUG: Received successful results from /analyze (reconstruct)", results);
+            // Hide loading indicator
+            document.getElementById('reconstructionLoading').style.display = 'none';
+
+            if (results.error) {
+                alert('Backend Error during reconstruction: ' + results.error);
+                $('#reconstructStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> Backend Error during reconstruction: ' + results.error + '</div>');
+                 // Clear 3D points display on error
+                 $('#reconstructed3dPointsContent').html('<pre>Error during reconstruction.</pre>').css('display', 'block');
+                return;
+            }
+
+            // Store reconstructed 3D points
+            currentReconstructed3dPoints = results.points_3d;
+            console.log("DEBUG: Stored reconstructed 3D points.", currentReconstructed3dPoints.length);
+
+            // Display reconstructed 3D points in the new section
+            displayReconstructed3dPoints(currentReconstructed3dPoints);
+
+            $('#reconstructStatus').html('<div class="text-success"><i class="bi bi-check-circle"></i> 3D Reconstruction Complete!</div>');
+            // No automatic scroll to resultsSection here
+
+             // Populate analysis auto input area after successful reconstruction
+            populateAnalysisAutoInputArea();
+
+        })
+        .catch(error => {
+            console.error('Fetch error during 3D reconstruction:', error);
+            document.getElementById('reconstructionLoading').style.display = 'none';
+            $('#reconstructStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> Error during 3D reconstruction: ' + error.message + '</div>');
+            // Clear 3D points and analysis results on error and show the div with error message
+            currentReconstructed3dPoints = null;
+            $('#reconstructed3dPointsContent').html('<pre>Error during reconstruction.</pre>').css('display', 'block');
+            $('#analysisResultsContent').html('');
+            populateAnalysisAutoInputArea(); // Update analysis input area state
+        });
+    }
+
+    // Add click handler for reconstruct button
+    $('#reconstructBtn').on('click', function() {
+        console.log("DEBUG: Reconstruct 3D Points button clicked.");
+        // The loadFromPreviousSteps function now prepares data and calls perform3DReconstruction
+        loadFromPreviousSteps();
+    });
+
+    // Add new function to display reconstructed 3D points
+    function displayReconstructed3dPoints(points_3d) {
+        console.log("DEBUG: displayReconstructed3dPoints called with count:", points_3d ? points_3d.length : 0);
+        let points3dHtml = '';
+        const contentDiv = $('#reconstructed3dPointsContent');
+
+        if (points_3d && points_3d.length > 0) {
+             points3dHtml += '<pre>';
+             points3dHtml += `   X                             Y                             Z\n`;
+             points3dHtml += `----------------------------------------------------------------------------\n`;
+             for (const point of points_3d) {
+                  if (Array.isArray(point) && point.length === 3) {
+                       // Use toFixed for consistent decimal places and padEnd for alignment
+                       points3dHtml += `${point[0].toFixed(10).padEnd(30)}${point[1].toFixed(10).padEnd(30)}${point[2].toFixed(10)}\n`;
+                  } else {
+                       points3dHtml += `Invalid point format or data: ${JSON.stringify(point)}\n`;
+                  }
+             }
+             points3dHtml += '</pre>';
+             contentDiv.html(points3dHtml);
+             contentDiv.css('display', 'block'); // Show the div
+        } else {
+             points3dHtml += '<pre>No 3D points reconstructed.</pre>';
+              contentDiv.html(points3dHtml);
+              contentDiv.css('display', 'block'); // Show the div even if empty, to indicate status
+         }
+    }
+
+    // Step 4: Input Method Toggle Handler
+    $('input[name="analysisInputMethod"]').on('change', function() {
+        if ($(this).val() === 'manual') {
+            $('#analysisAutoInputArea').hide();
+            $('#analysisManualInputArea').show();
+        } else {
+            $('#analysisManualInputArea').hide();
+            $('#analysisAutoInputArea').show();
+            // Populate auto input area with loaded 3D points and frame rate
+            populateAnalysisAutoInputArea();
+        }
+    });
+
+    // Function to populate the Step 4 auto input area
+    function populateAnalysisAutoInputArea() {
+         console.log("DEBUG: populateAnalysisAutoInputArea called");
+         // Display loaded 3D points from Step 3
+         if (currentReconstructed3dPoints && currentReconstructed3dPoints.length > 0) {
+             // Format 3D points for display similar to Step 3 output
+             let points3dHtml = '';
+             points3dHtml += `   X                             Y                             Z\n`;
+             points3dHtml += `----------------------------------------------------------------------------\n`;
+             for (const point of currentReconstructed3dPoints) {
+                  if (Array.isArray(point) && point.length === 3) {
+                       points3dHtml += `${point[0].toFixed(10).padEnd(30)}${point[1].toFixed(10).padEnd(30)}${point[2].toFixed(10)}\n`;
+                  } else {
+                       points3dHtml += `Invalid point format or data: ${JSON.stringify(point)}\n`;
+                  }
+             }
+             $('#loaded3dPointsContent').html('<pre>' + points3dHtml + '</pre>');
+         } else {
+              $('#loaded3dPointsContent').html('<pre>Reconstructed 3D points not available. Complete Step 3.</pre>');
+         }
+
+         // Display the frame rate entered in the Step 3 auto input field
+         let frameRateInStep3Auto = $('#frameRateAuto').val();
+         if (frameRateInStep3Auto) {
+              $('#loadedFrameRateContent').html('<pre>Frame Rate: ' + frameRateInStep3Auto + ' FPS (from Step 3 Input)</pre>');
+         } else {
+              $('#loadedFrameRateContent').html('<pre>Frame Rate: N/A. Complete Step 3 and ensure frame rate is entered.</pre>');
+         }
+    }
+
+    // Initial population of Step 4 auto input area on page load (will show placeholders)
+    populateAnalysisAutoInputArea();
+
+    // Step 4: Analysis Button Click Handler
+    $('#analyzeBtn').on('click', function() {
+        console.log("DEBUG: Analyze button clicked. Starting analysis data gathering.");
+        $('#analyzeStatus').html('<div class="text-info"><i class="bi bi-hourglass-split"></i> Performing 5-step analysis, please wait...</div>');
+        $('#analyzeBtn').prop('disabled', true);
+        // Reconstruct button should remain enabled/disabled based on its own process, not analysis
+        // $('#reconstructBtn').prop('disabled', true);
+
+        let dataToSend = {};
+
+        // Determine input method and gather data
+        if ($('#analysisAutoInput').is(':checked')) {
+            console.log("DEBUG: Analysis Auto input selected.");
+            // Auto input: use stored 3D points and frame rate from Step 3
+            if (!currentReconstructed3dPoints || currentReconstructed3dPoints.length === 0) {
+                $('#analyzeStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> Reconstructed 3D points from Step 3 are missing. Please complete Step 3 first.</div>');
+                $('#analyzeBtn').prop('disabled', false);
+                // $('#reconstructBtn').prop('disabled', false);
+                console.error("Error: currentReconstructed3dPoints is empty or null.", currentReconstructed3dPoints);
+                return;
+            }
+
+             // Get frame rate from the Step 3 auto input field
+            let frameRateInStep3Auto = parseFloat($('#frameRateAuto').val());
+            if (isNaN(frameRateInStep3Auto) || frameRateInStep3Auto <= 0) {
+                 $('#analyzeStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> Invalid frame rate from Step 3. Please ensure a valid frame rate is entered there.</div>');
+                 $('#analyzeBtn').prop('disabled', false);
+                 console.error("Error: Invalid frame rate from Step 3.", frameRateInStep3Auto);
+                 return;
+             }
+
+            dataToSend = {
+                action: 'analyze', // Specify the action
+                points_3d: currentReconstructed3dPoints, // Use the stored 3D points
+                frame_rate: frameRateInStep3Auto
+            };
+
+        } else { // Manual input: read from textareas
+            try {
+                console.log("DEBUG: Analysis Manual input selected. Attempting to parse manual 3D points.");
+                let manualInputText = $('#manual3dPoints').val().trim(); // Trim whitespace
+                let manual3dPoints = [];
+
+                // Attempt to parse as JSON first
+                try {
+                     manual3dPoints = JSON.parse(manualInputText);
+                     // Basic validation for JSON format: ensure it's an array of arrays with 3 elements
+                     if (!Array.isArray(manual3dPoints) || manual3dPoints.length === 0 || !Array.isArray(manual3dPoints[0]) || manual3dPoints[0].length !== 3) {
+                          throw new Error("JSON format is not an array of 3D points (e.g., [[X1, Y1, Z1], ...]).");
+                     }
+                     // Convert all numbers to float to be safe and validate
+                     manual3dPoints = manual3dPoints.map(point => point.map(value => {
+                          const floatValue = parseFloat(value);
+                          if (isNaN(floatValue)) throw new Error("Invalid numerical value in JSON 3D points.");
+                          return floatValue;
+                     }));
+
+                } catch (jsonError) {
+                     console.warn("JSON parsing failed, attempting space-separated format.", jsonError);
+                     // If JSON parsing fails, attempt to parse as space-separated lines
+                     const lines = manualInputText.split(/\r?\n/).filter(line => line.trim() !== ''); // Filter out empty lines
+                     if (lines.length === 0) {
+                         throw new Error("Manual 3D points field is empty or contains only whitespace.");
+                     }
+
+                     for (const line of lines) {
+                          const values = line.trim().split(/\s+/); // Split by one or more whitespace characters
+                          if (values.length === 3) {
+                               const x = parseFloat(values[0]);
+                               const y = parseFloat(values[1]);
+                               const z = parseFloat(values[2]);
+
+                               if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                                    manual3dPoints.push([x, y, z]);
+                               } else {
+                                    throw new Error(`Invalid numerical value on line: ${line}`);
+                               }
+                          } else {
+                               throw new Error(`Each line must contain exactly 3 space/tab-separated values (X Y Z). Invalid line: ${line}`);
+                          }
+                     }
+                      // Ensure we parsed some points
+                     if (manual3dPoints.length === 0) {
+                         throw new Error("No valid 3D points parsed from space/tab-separated input.");
+                     }
+                }
+
+                console.log("DEBUG: Manual 3D points parsed successfully.", manual3dPoints.length);
+
+                let manualFrameRate = parseFloat($('#frameRateAnalysisManual').val());
+                if (isNaN(manualFrameRate) || manualFrameRate <= 0) {
+                    throw new Error("Invalid frame rate for manual input. Please enter a positive number.");
+                }
+
+                dataToSend = {
+                     action: 'analyze', // Specify the action
+                    points_3d: manual3dPoints,
+                    frame_rate: manualFrameRate
+                };
+
+            } catch (e) {
+                $('#analyzeStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> Manual Input Error: ' + e.message + '</div>');
+                $('#analyzeBtn').prop('disabled', false);
+                // $('#reconstructBtn').prop('disabled', false);
+                console.error("Error processing manual input for analysis:", e);
+                return;
+            }
+        }
+
+        console.log("DEBUG: Data gathered for analysis:", dataToSend);
+
+        // Send data to backend for analysis
+        fetch('/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataToSend)
+        })
+        .then(response => {
+            console.log("DEBUG: Received response from /analyze (analyze)");
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    console.error("DEBUG: Backend error response:", errorData);
+                    throw new Error(errorData.error || 'Unknown analysis error');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("DEBUG: Received successful results from /analyze (analyze)", data);
+            $('#analyzeStatus').html('<div class="text-success"><i class="bi bi-check-circle"></i>Analysis complete!</div>');
+            displayAnalysisResults(data); // Display analysis results
+            $('#resultsSection').show(); // Show the results section
+            $('html, body').animate({ scrollTop: $('#resultsSection').offset().top }, 500); // Scroll to results
+        })
+        .catch(error => {
+            console.error("Fetch error during analysis:", error);
+            $('#analyzeStatus').html('<div class="text-danger"><i class="bi bi-x-circle"></i> ' + error.message + '</div>');
+             // Clear analysis results on error
+            $('#analysisResultsContent').html('');
+             $('#resultsSection').hide(); // Hide results section on error
+        })
+        .finally(() => {
+            $('#analyzeBtn').prop('disabled', false);
+            // $('#reconstructBtn').prop('disabled', false);
+        });
+    });
+
+    // Helper function to filter coordinates by frame range
+    function filterCoordinatesByFrame(coordinates, startFrame, endFrame, totalFrames) {
+        if (!coordinates || coordinates.length === 0) {
+            return [];
+        }
+
+        // Handle negative endFrame (relative to total frames)
+        let actualEndFrame = (endFrame === -1 || endFrame > totalFrames) ? totalFrames : endFrame;
+
+        return coordinates.filter(coord => coord.frame >= startFrame && coord.frame <= actualEndFrame);
+    }
+     // Helper function to get the range of frame numbers in the data
+    function getDataFrameRange(coordinates) {
+        if (!coordinates || coordinates.length === 0) {
+            return 0;
+        }
+        // Assuming coordinates are sorted or need to find max frame
+         return Math.max(...coordinates.map(coord => coord.frame));
+    }
+
+    // Add this to your existing JavaScript
+    document.getElementById('toggleConverter').addEventListener('click', function() {
+        const content = document.getElementById('converterContent');
+        const icon = this.querySelector('i');
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.classList.remove('bi-chevron-down');
+            icon.classList.add('bi-chevron-up');
+        } else {
+            content.style.display = 'none';
+            icon.classList.remove('bi-chevron-up');
+            icon.classList.add('bi-chevron-down');
+        }
+    });
+
+    // Auto-fill sample data when conversion type changes
+    document.getElementById('conversionType').addEventListener('change', function() {
+        const type = this.value;
+        document.getElementById('input').value = samples[type] || '';
+    });
+
+    // Initialize with first sample
+    document.getElementById('input').value = samples.csv_to_array;
+
+    // Show frame range inputs by default (for video input)
+    $('#frameRangeInputs').show();
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

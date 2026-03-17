@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Format Converter</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { display: flex; gap: 20px; }
+        .side { flex: 1; }
+        textarea { width: 100%; height: 300px; font-family: monospace; font-size: 12px; }
+        button { padding: 10px 20px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; display: block; width: 100%; }
+        button:hover { background: #0056b3; }
+        #output { background: #f8f9fa; }
+        .format-selector { margin: 10px 0; }
+        select { padding: 8px; margin: 0 10px; }
+    </style>
+</head>
+<body>
+    <h1>Data Format Converter</h1>
+    
+    <div class="format-selector">
+        <label>Conversion Type:</label>
+        <select id="conversionType">
+            <option value="csv_to_array">CSV to Array Format</option>
+            <option value="labeled_to_array">Labeled Values to Array</option>
+            <option value="table_to_columns">Table to Column Format</option>
+        </select>
+    </div>
+    
+    <div class="container">
+        <div class="side">
+            <h3>Input Data</h3>
+            <textarea id="input" placeholder="Paste your data here..."></textarea>
+            <button onclick="convert()">Convert</button>
+        </div>
+        
+        <div class="side">
+            <h3>Output</h3>
+            <textarea id="output" readonly></textarea>
+            <button onclick="copyOutput()">Copy Output</button>
+        </div>
+    </div>
+
+    <script>
+        function convert() {
+            const input = document.getElementById('input').value.trim();
+            const type = document.getElementById('conversionType').value;
+            let output = '';
+            
+            try {
+                switch(type) {
+                    case 'csv_to_array':
+                        output = convertCSVToArray(input);
+                        break;
+                    case 'labeled_to_array':
+                        output = convertLabeledToArray(input);
+                        break;
+                    case 'table_to_columns':
+                        output = convertTableToColumns(input);
+                        break;
+                }
+                
+                document.getElementById('output').value = output;
+                
+                if (output) {
+                    document.getElementById('output').style.display = 'block';
+                    console.log('Conversion successful');
+                }
+            } catch(error) {
+                document.getElementById('output').value = 'Error: ' + error.message;
+            }
+        }
+        
+        function convertCSVToArray(input) {
+            const lines = input.split('\n').filter(line => line.trim());
+            const result = lines.map(line => {
+                const parts = line.split(',').map(p => p.trim());
+                const values = parts.filter(p => !isNaN(parseFloat(p))).map(val => parseFloat(val));
+                const finalValues = values.length > 2 ? values.slice(1) : values;
+                return '    [' + finalValues.join(', ') + ']';
+            });
+            
+            return '[\n' + result.join(',\n') + '\n]';
+        }
+        
+        function convertLabeledToArray(input) {
+            const lines = input.split('\n').filter(line => line.trim());
+            const values = [];
+            
+            lines.forEach(line => {
+                if (line.includes(':')) {
+                    // Format: L1: 0.123
+                    const value = line.split(':')[1].trim();
+                    values.push(parseFloat(value));
+                } else {
+
+                    const num = parseFloat(line.trim());
+                    if (!isNaN(num)) values.push(num);
+                }
+            });
+            
+            return '[\n    ' + values.join(', ') + '\n]';
+        }
+        
+        function convertTableToColumns(input) {
+            const lines = input.split('\n').filter(line => line.trim() && !line.includes('-'));
+            
+            const result = lines.map(line => {
+                
+                const parts = line.trim().split(/\s+/);
+                const values = parts.filter(p => !isNaN(parseFloat(p)) && p !== '').map(val => parseFloat(val));
+                
+                const finalValues = values.length > 3 ? values.slice(1) : values;
+                return finalValues.map(v => v.toFixed(8)).join('     ');
+            }).filter(line => line); 
+            
+            return result.join('\n');
+        }
+        
+        function copyOutput() {
+            const output = document.getElementById('output');
+            output.select();
+            document.execCommand('copy');
+            alert('Output copied to clipboard!');
+        }
+        
+        // Sample data for testing
+        const samples = {
+            csv_to_array: `605,0.3164427439371745,0.7001073201497395
+606,0.3108209609985352,0.688004387749566
+607,0.3044027328491211,0.6756428471317998`,
+            
+            labeled_to_array: `L1: 0.122685208
+L2: 0.004410698
+L3: -0.049834586
+L4: 0.467277850`,
+            
+            table_to_columns: `Frame                         X                             Y                             Z
+-------------------------------------------------------------------------------------------
+2                             2.3838122698                  2.4947839693                  1.5619817085
+3                             2.4675187968                  2.5703338776                  1.5437937369`
+        };
+        
+        
+        document.getElementById('conversionType').addEventListener('change', function() {
+            const type = this.value;
+            document.getElementById('input').value = samples[type] || '';
+        });
+        
+        
+        document.getElementById('input').value = samples.csv_to_array;
+    </script>
+</body>
+</html> 
