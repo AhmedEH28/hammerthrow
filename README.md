@@ -26,5 +26,3 @@ Parts of this project page were adopted from the [Nerfies](https://nerfies.githu
 
 
 
-cd /home/ahmed/OneDrive/Githubio/hammerthrow_webpage
-python -m http.server 8000
