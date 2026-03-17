@@ -1,4 +1,4 @@
-# Academic Project Page Template
+## Academic Project Page Template
 
 This repository is an academic paper project page template.
 
@@ -6,19 +6,15 @@ This repository is an academic paper project page template.
 
 - Edit content in [index.html](index.html).
 - Use the provided HTML blocks and remove/comment out what you do not need.
-- Replace the favicon in `static/images/` with your own.
+- Replace the `static/images/` with your own.
 
 
 ### Tips
 
 - Follow the comments inside [index.html](index.html).
-- Keep metadata tags updated for search and sharing previews.
-- For most media, 1920–2048 resolution is enough.
 - Compress images and videos for faster loading.
-- Use TinyPNG for images.
 - Prefer YouTube hosting for large videos (>10MB).
 - Works well with GitHub Pages.
-- You can add a tracker (e.g., Statcounter) for traffic analytics.
 
 
 ### Acknowledgments
