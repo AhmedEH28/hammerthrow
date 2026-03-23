@@ -316,7 +316,7 @@
 
     <!-- Results Section -->
     <div class="results-section" id="resultsSection" style="display:none;">
-        <h5><i class="bi bi-bar-chart"></i> Analysis Results (5 Steps)</h5>
+        <h5><i class="bi bi-bar-chart"></i> Analysis Results</h5>
         <div id="analysisResultsContent">
             <!-- Results for each step will be displayed here -->
         </div>
@@ -500,7 +500,6 @@ function displayAnalysisResults(results) {
 
 <script>
 $(function() {
-    // Debugging: Check if the calibration file input element is found
     if ($('#calibrationFileInput').length === 0) {
         console.error("Error: Calibration file input element #calibrationFileInput not found!");
     } else {
@@ -670,7 +669,6 @@ $(function() {
                 currentDltParams = data.dlt_params;
                 currentCalibrationData = data.calibration_data; // Store full calibration data
 
-                // Display the calculated DLT parameters in a beautiful, bordered container side-by-side
                 let dltHtml = '';
                 
                 dltHtml += '<div class="card mt-3">'; // Start Bootstrap Card container (outer border)

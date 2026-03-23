@@ -58,12 +58,6 @@ def calculate_projectile_motion(points_3d, frame_rate=240, filter_method=None):
 
         if temp_points_for_velocity_check:
             processed_points = np.array(temp_points_for_velocity_check)
-            # For the last point in the filtered segment, its velocity is calculated using the next point, 																											
-            # which might have been filtered out. We need to handle this or recalculate velocity differently.
-            # For simplicity in this step, we'll just use the filtered points directly for parameter calculation,
-            # but the velocity calculation will still be based on consecutive points in the *original* sequence for now.
-            # A more robust approach might involve interpolation or different outlier detection.
-            # Let's adjust to calculate parameters for *all* points first, then filter outliers based on calculated velocity.
 
             # Recalculate parameters for all original points
             all_params = calculate_projectile_motion(points_3d, frame_rate, None) # Calculate without velocity filter first
@@ -81,22 +75,6 @@ def calculate_projectile_motion(points_3d, frame_rate=240, filter_method=None):
                  # If only one or no velocity data points, no outliers can be determined
                  processed_points = points_3d # Keep all original points
 
-    # Now calculate parameters for the processed_points (which might be filtered by height or velocity outliers)
-    # We need to map these processed_points back to their original frame numbers
-    
-    # If no filtering applied before calling this function (i.e., initial call for Step 1 or Step 5 recalculation),
-    # the points_3d passed here are the relevant points from the previous step.
-    # We need to ensure we have the original frame numbers associated with these points.
-    # Let's modify the calling function to pass frame numbers alongside points if filtering was applied externally.
-
-    # For the general case within this function, let's assume points_3d now also contains original frame indices
-    # Format: points_3d should be a list of tuples/lists like [(x, y, z, original_frame), ...]
-    
-    # Let's redefine this function to take points_3d as a list of {'frame': int, 'x': float, 'y': float, 'z': float}
-    # to keep track of original frame numbers consistently.
-
-    # New plan: Let the calling function (the 5-step orchestrator) handle filtering and pass the relevant points
-    # and their original frame numbers to a simplified calculate_step_parameters function.
 
 def add_average_row(results, skip_first_n_frames=0):
     """
@@ -306,10 +284,6 @@ def perform_5_step_analysis(points_3d_np, frame_rate):
     # Add average row (no skipping)
     step3_results = add_average_row(step3_results, skip_first_n_frames=0)
 
-    # Step 4: Deterministic pipeline combining previous filters
-    # We compute Step 4 by applying the height filter first, calculating per-segment parameters,
-    # then applying the velocity filter, and finally filtering by angle. This ensures Step 4
-    # always reflects the chain: height -> velocity -> angle (as the user expects).
     step4_results = []
 
     # Height filter (same bounds as used in Step 2)
@@ -337,7 +311,6 @@ def perform_5_step_analysis(points_3d_np, frame_rate):
             step4_results = add_average_row(step4_results, skip_first_n_frames=0)
 
     # Step 5: Compute averages (velocity, height, angle) from Step 4 and compute final distance
-    # using those averaged values (do NOT use the mean of per-segment distances)
     step5_results = []
     if step4_results and len(step4_results) > 0:
         # Filter out the average row from step4 to get only data rows
@@ -387,24 +360,13 @@ def perform_5_step_analysis(points_3d_np, frame_rate):
                 "z": float(np.mean([p['z'] for p in step4_data_rows])) if step4_data_rows else np.nan
             }]
 
-    # Per user request: only expose two steps in the returned analysis payload
-    # 1) results_analysis_after_outlier_filtered  (previously step4_velocity_outliers)
-    # 2) step5_recalculated_avg_vel               (the averaged/recalculated final step)
-    #
-    # Steps 1-3 are intentionally kept in the function for internal calculations/debugging but
-    # are NOT returned as part of the public API to the UI. They are effectively "commented out"
-    # from the output surface while remaining in the code for traceability.
 
     return {
-        # Keep both the new friendly key and the legacy key so the UI and older code
-        # that expect 'step4_velocity_outliers' continue to work.
         'results_analysis_after_outlier_filtered': step4_results,
         'step4_velocity_outliers': step4_results,
         'step5_recalculated_avg_vel': step5_results
     }
 
-# The original analyze_trajectory and estimate_throw_distance are now superseded by perform_5_step_analysis
-# Keep them for now but they won't be used in the /analyze route after the next app.py edit.
 
 def analyze_trajectory(frame_analysis, frame_rate=240):
     """
@@ -417,8 +379,6 @@ def analyze_trajectory(frame_analysis, frame_rate=240):
     Returns:
     - Dictionary containing summary statistics
     """
-    # This function will be replaced or adapted to summarize the 5 step results if needed later
-    # For now, returning a basic structure to avoid errors
     return {'message': 'Detailed analysis results available in 5 steps.'}
 
 def estimate_throw_distance(points_3d, frame_rate=240):

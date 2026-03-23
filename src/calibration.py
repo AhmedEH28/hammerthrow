@@ -92,7 +92,6 @@ def compute_dlt_parameters_simi(calibration_3d, points_2d, image_width, image_he
     A = np.array(A)
     b = np.array(b)
     
-    # Solve using least squares
     # --- Debugging: Log DLT input data ---
     print("DEBUG: Input points_3d for DLT calculation:")
     print(points_3d)

@@ -1,3 +1,0 @@
-# Placeholder for back view video
-# In a real implementation, this would be the actual back view video file
-echo "This is a placeholder for the back view video file" > /dev/null
