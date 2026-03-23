@@ -1,1 +1,9 @@
 torch
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Temporary lock files
+*.~lock.*
+.~lock.*

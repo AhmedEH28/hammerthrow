@@ -92,11 +92,6 @@ def advanced_analysis():
     """Serve the original advanced interface"""
     return render_template('index.html', results={})
 
-@app.route('/simple', methods=['GET'])
-def simple_analysis():
-    """Serve the simplified analysis interface (same as default)"""
-    return render_template('simple_analysis.html')
-
 @app.route('/upload_test_throw', methods=['POST'])
 def upload_test_throw():
     """
