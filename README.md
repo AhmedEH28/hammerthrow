@@ -34,7 +34,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Open: http://localhost:<PORT>/ (default: 5000)
+Open: http://localhost:&lt;PORT&gt;/ (default: 5000)
 
 ## Required Input Files
 
@@ -49,7 +49,7 @@ If you use this repository in research, please cite:
 ```bibtex
 @article{hasen2026hammer,
     title   = {Hammer Throw Distance Estimation Using Deep Learning and Physics-Based Modeling},
-    author  = {Hasen, Ahmed Endris and Passalis, Nikolaos and V{"a}nttinen, Tomi and Raitoharju, Jenni},
+    author  = {Hasen, Ahmed Endris and Passalis, Nikolaos and Vanttinen, Tomi and Raitoharju, Jenni},
     journal = {Expert Systems with Applications},
     year    = {2026},
     pages   = {132022},
