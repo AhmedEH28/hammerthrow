@@ -27,11 +27,11 @@ Open: http://localhost:5000/
 
 
 
-## Run With app.py (Local)
+## Run locally
 
 ```bash
 pip install -r requirements.txt
-python3 app.py
+python app.py
 ```
 
 Open: http://localhost:5000/
