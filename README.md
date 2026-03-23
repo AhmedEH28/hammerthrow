@@ -34,7 +34,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Open: http://localhost:&lt;PORT&gt;/ (default: 5000)
+Open: http://localhost:PORT<PORT>/ (default: 5000)
 
 ## Required Input Files
 
