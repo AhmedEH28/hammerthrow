@@ -23,18 +23,12 @@ Project page: https://ahmedeh28.github.io/hammerthrow/
 docker compose up --build -d
 ```
 
-Open: http://localhost:5000/
-
-
-
 ## Run locally
 
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
-
-Open: http://localhost:PORT<PORT>/ (default: 5000)
 
 ## Required Input Files
 
